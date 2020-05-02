@@ -50,12 +50,14 @@ public class ImageController {
         Image image = imageService.getImageByTitle(title);
         model.addAttribute("image", image);
         model.addAttribute("tags",image.getTags());
+        return "images/image";
     }
 
     //This controller method is called when the request pattern is of type 'images/upload'
     //The method returns 'images/upload.html' file
     @RequestMapping("/images/upload")
     public String newImage() {
+        return "images/upload";
     }
 
     //This controller method is called when the request pattern is of type 'images/upload' and also the incoming request is of POST type
@@ -80,6 +82,7 @@ public class ImageController {
         newImage.setTags(imageTags);
         newImage.setDate(new Date());
         imageService.uploadImage(newImage);
+        return "redirect:/images";
     }
 
     //This controller method is called when the request pattern is of type 'editImage'
@@ -95,6 +98,7 @@ public class ImageController {
         String tags = convertTagsToString(image.getTags());
         model.addAttribute("image", image);
         model.addAttribute("tags",tags);
+        return "images/edit";
     }
 
     //This controller method is called when the request pattern is of type 'images/edit' and also the incoming request is of PUT type
@@ -115,6 +119,12 @@ public class ImageController {
         String updatedImageData = convertUploadedFileToBase64(file);
         List<Tag> imageTags = findOrCreateTags(tags);
 
+        if (updatedImageData.isEmpty())
+            updatedImage.setImageFile(image.getImageFile());
+        else {
+            updatedImage.setImageFile(updatedImageData);
+        }
+
         updatedImage.setId(imageId);
         User user = (User) session.getAttribute("loggeduser");
         updatedImage.setUser(user);
@@ -122,6 +132,7 @@ public class ImageController {
         updatedImage.setDate(new Date());
 
         imageService.updateImage(updatedImage);
+        return "redirect:/images/" + updatedImage.getTitle();
     }
 
 
@@ -131,6 +142,7 @@ public class ImageController {
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
     public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
         imageService.deleteImage(imageId);
+        return "redirect:/images";
     }
 
 
@@ -146,27 +158,29 @@ public class ImageController {
         StringTokenizer st = new StringTokenizer(tagNames, ",");
         List<Tag> tags = new ArrayList<Tag>();
 
-//        while (st.hasMoreTokens()) {
-//            String tagName = st.nextToken().trim();
-//            Tag tag = tagService.getTagByName(tagName);
-//
-//            if (tag == null) {
-//                Tag newTag = new Tag(tagName);
-//                tag = tagService.createTag(newTag);
-//            }
-//            tags.add(tag);
+        while (st.hasMoreTokens()) {
+            String tagName = st.nextToken().trim();
+            Tag tag = tagService.getTagByName(tagName);
+
+            if (tag == null) {
+                Tag newTag = new Tag(tagName);
+                tag = tagService.createTag(newTag);
+            }
+            tags.add(tag);
         }
+        return tags;
     }
 
     private String convertTagsToString(List<Tag> tags) {
         StringBuilder tagString = new StringBuilder();
 
-//        for (int i = 0; i <= tags.size() - 2; i++) {
-//            tagString.append(tags.get(i).getName()).append(",");
-//        }
-//
-//        Tag lastTag = tags.get(tags.size() - 1);
-//        tagString.append(lastTag.getName());
+        for (int i = 0; i <= tags.size() - 2; i++) {
+            tagString.append(tags.get(i).getName()).append(",");
+        }
 
+        Tag lastTag = tags.get(tags.size() - 1);
+        tagString.append(lastTag.getName());
+
+        return tagString.toString();
     }
 }
