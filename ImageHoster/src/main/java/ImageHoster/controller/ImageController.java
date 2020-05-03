@@ -1,5 +1,6 @@
 package ImageHoster.controller;
 
+import ImageHoster.model.Comment;
 import ImageHoster.model.Image;
 import ImageHoster.model.Tag;
 import ImageHoster.model.User;
@@ -14,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.naming.CommunicationException;
 import javax.servlet.http.HttpSession;
+import javax.websocket.server.PathParam;
 import java.io.IOException;
 import java.util.*;
 
@@ -45,11 +48,12 @@ public class ImageController {
     //Also now you need to add the tags of an image in the Model type object
     //Here a list of tags is added in the Model type object
     //this list is then sent to 'images/image.html' file and the tags are displayed
-    @RequestMapping("/images/{title}")
-    public String showImage(@PathVariable("title") String title, Model model) {
-        Image image = imageService.getImageByTitle(title);
+    @RequestMapping("/images/{id}")
+    public String showImage(@PathVariable("id") Integer imageId, Model model) {
+        Image image = imageService.getImage(imageId);
         model.addAttribute("image", image);
-        model.addAttribute("tags",image.getTags());
+        model.addAttribute("tags", image.getTags());
+        model.addAttribute("comments",image.getComment());
         return "images/image";
     }
 
@@ -74,6 +78,7 @@ public class ImageController {
     public String createImage(@RequestParam("file") MultipartFile file, @RequestParam("tags") String tags, Image newImage, HttpSession session) throws IOException {
 
         User user = (User) session.getAttribute("loggeduser");
+
         newImage.setUser(user);
         String uploadedImageData = convertUploadedFileToBase64(file);
         newImage.setImageFile(uploadedImageData);
@@ -92,12 +97,21 @@ public class ImageController {
     //The method first needs to convert the list of all the tags to a string containing all the tags separated by a comma and then add this string in a Model type object
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
-    public String editImage(@RequestParam("imageId") Integer imageId, Model model) {
+    public String editImage(@RequestParam("imageId") Integer imageId, Model model,HttpSession session) {
         Image image = imageService.getImage(imageId);
+        User loggedUser = (User)session.getAttribute("loggeduser");
+        if(image.getUser().getId() != loggedUser.getId()){
+            String error = "Only the owner of the image can edit the image";
+            model.addAttribute("editError",error);
+            model.addAttribute("image", image);
+            model.addAttribute("tags", image.getTags());
+            return "/images/image";
+
+        }
 
         String tags = convertTagsToString(image.getTags());
         model.addAttribute("image", image);
-        model.addAttribute("tags",tags);
+        model.addAttribute("tags", tags);
         return "images/edit";
     }
 
@@ -113,7 +127,7 @@ public class ImageController {
     //The method also receives tags parameter which is a string of all the tags separated by a comma using the annotation @RequestParam
     //The method converts the string to a list of all the tags using findOrCreateTags() method and sets the tags attribute of an image as a list of all the tags
     @RequestMapping(value = "/editImage", method = RequestMethod.PUT)
-    public String editImageSubmit(@RequestParam("file") MultipartFile file, @RequestParam("imageId") Integer imageId,@RequestParam("tags") String tags, Image updatedImage, HttpSession session) throws IOException {
+    public String editImageSubmit(@RequestParam("file") MultipartFile file, @RequestParam("imageId") Integer imageId, @RequestParam("tags") String tags, Image updatedImage, HttpSession session) throws IOException {
 
         Image image = imageService.getImage(imageId);
         String updatedImageData = convertUploadedFileToBase64(file);
@@ -140,7 +154,19 @@ public class ImageController {
     //The method calls the deleteImage() method in the business logic passing the id of the image to be deleted
     //Looks for a controller method with request mapping of type '/images'
     @RequestMapping(value = "/deleteImage", method = RequestMethod.DELETE)
-    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId) {
+    public String deleteImageSubmit(@RequestParam(name = "imageId") Integer imageId,HttpSession session,Model model) {
+        User loggedUser = (User)session.getAttribute("loggeduser");
+
+        Image image = imageService.getImage(imageId);
+        if(image.getUser().getId() != loggedUser.getId()){
+            String error = "Only the owner of the image can delete the image";
+            model.addAttribute("deleteError",error);
+            model.addAttribute("image", image);
+            model.addAttribute("tags", image.getTags());
+
+            return "images/image";
+
+        }
         imageService.deleteImage(imageId);
         return "redirect:/images";
     }
@@ -151,8 +177,12 @@ public class ImageController {
         return Base64.getEncoder().encodeToString(file.getBytes());
     }
 
-    //findOrCreateTags() method has been implemented, which returns the list of tags after converting the ‘tags’ string to a list of all the tags and also stores the tags in the database if they do not exist in the database. Observe the method and complete the code where required for this method.
-    //Try to get the tag from the database using getTagByName() method. If tag is returned, you need not to store that tag in the database, and if null is returned, you need to first store that tag in the database and then the tag is added to a list
+    //findOrCreateTags() method has been implemented, which returns the list of tags after converting the ‘tags’
+    // string to a list of all the tags and also stores the tags in the database
+    // if they do not exist in the database. Observe the method and complete the code where required for this method.
+    //Try to get the tag from the database using getTagByName() method. If tag is returned,
+    // you need not to store that tag in the database, and if null is returned,
+    // you need to first store that tag in the database and then the tag is added to a list
     //After adding all tags to a list, the list is returned
     private List<Tag> findOrCreateTags(String tagNames) {
         StringTokenizer st = new StringTokenizer(tagNames, ",");
@@ -171,6 +201,10 @@ public class ImageController {
         return tags;
     }
 
+
+    //The method receives the list of all tags
+    //Converts the list of all tags to a single string containing all the tags separated by a comma
+    //Returns the string
     private String convertTagsToString(List<Tag> tags) {
         StringBuilder tagString = new StringBuilder();
 
@@ -182,5 +216,20 @@ public class ImageController {
         tagString.append(lastTag.getName());
 
         return tagString.toString();
+    }
+
+    @RequestMapping(value = "/image/{id}/{title}/comments",method = RequestMethod.POST)
+    public String createComment(@PathVariable("id") Integer imageId,@RequestParam("comment") String comment){
+        System.out.println(imageId);
+        System.out.println(comment);
+        Image image = imageService.getImage(imageId);
+        Comment cmt = new Comment();
+        cmt.setDate(new Date());
+        cmt.setText(comment);
+        cmt.setImage(image);
+        cmt.setUser(image.getUser());
+        image.setComment(cmt);
+        imageService.updateImage(image);
+        return "redirect:/images/" + imageId;
     }
 }

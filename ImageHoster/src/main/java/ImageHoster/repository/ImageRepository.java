@@ -1,10 +1,11 @@
 package ImageHoster.repository;
 
-import ImageHoster.model.Comment;
 import ImageHoster.model.Image;
+import ImageHoster.model.User;
 import org.springframework.stereotype.Repository;
 
 import javax.persistence.*;
+import javax.servlet.http.HttpSession;
 import java.util.List;
 
 //The annotation is a special type of @Component annotation which describes that the class defines a data repository
@@ -55,11 +56,14 @@ public class ImageRepository {
         EntityManager em = emf.createEntityManager();
         try {
             TypedQuery<Image> typedQuery = em.createQuery("SELECT i from Image i where i.title =:title", Image.class).setParameter("title", title);
+            typedQuery.getResultList();
             return typedQuery.getSingleResult();
         } catch (NoResultException nre) {
             return null;
         }
     }
+
+
 
     //The method creates an instance of EntityManager
     //Executes JPQL query to fetch the image from the database with corresponding id
@@ -98,6 +102,7 @@ public class ImageRepository {
     //The transaction is committed if it is successful
     //The transaction is rolled back in case of unsuccessful transaction
     public void deleteImage(Integer imageId) {
+
         EntityManager em = emf.createEntityManager();
         EntityTransaction transaction = em.getTransaction();
 
@@ -109,13 +114,5 @@ public class ImageRepository {
         } catch (Exception e) {
             transaction.rollback();
         }
-    }
-
-
-    public void createComment(Comment comment) {
-    }
-
-    public List<Comment> getAllComment(Integer id) {
-        return null;
     }
 }

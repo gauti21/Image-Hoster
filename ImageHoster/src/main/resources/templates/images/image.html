@@ -52,10 +52,11 @@
             </li>
         </ul>
 
-        <!--<h5 class="f4 mb0 underline">Comments</h5>-->
+        <h5 class="f4 mb0 underline">Comments</h5>
         <!-- A form to upload a comment to a particular image-->
         <form method="POST" enctype="multipart/form-data"
-              th:action="'/image/'+ ${image.id} + '/' + ${image.title} + '/comments'">
+              th:action="'/image/'+ ${image.id} + '/' + ${image.title} + '/comments'" >
+
             <fieldset id="sign_up" class="ba b&#45;&#45;transparent ph0 mh0">
                 <div class="mt3">
                     <label class="db fw6 lh-copy f6" for="comment">Write a comment</label>

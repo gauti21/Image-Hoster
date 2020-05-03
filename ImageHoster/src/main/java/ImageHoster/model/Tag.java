@@ -1,7 +1,6 @@
 package ImageHoster.model;
 
 import javax.persistence.*;
-import java.util.ArrayList;
 import java.util.List;
 
 //@Entity annotation specifies that the corresponding class is a JPA entity
@@ -29,7 +28,7 @@ public class Tag {
     //Note that no column will be generated for this attribute in the database instead a new table will be created
     //Since the mapping is Many to Many, a new table will be generated containing the two columns both referencing to the primary key of both the tables ('images', 'tags')
     @ManyToMany(fetch = FetchType.LAZY, mappedBy = "tags")
-    private List<Image> images = new ArrayList<>();;
+    private List<Image> images;
 
     public Tag() {
     }

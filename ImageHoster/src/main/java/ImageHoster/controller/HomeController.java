@@ -13,7 +13,7 @@ import java.util.List;
 public class HomeController {
 
     @Autowired
-    ImageService imageService;
+    private ImageService imageService;
 
     @RequestMapping("/")
     public String getAllImages(Model model) {
